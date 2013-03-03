@@ -217,6 +217,7 @@ public class StorageClient {
 
 			logger.info("    {}", line);
 		}
+		reader.close();
 	}
 
 }
