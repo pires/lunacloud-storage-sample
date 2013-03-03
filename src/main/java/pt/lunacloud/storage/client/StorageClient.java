@@ -27,30 +27,25 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import pt.lunacloud.AmazonClientException;
-import pt.lunacloud.AmazonServiceException;
+import pt.lunacloud.LunacloudClientException;
+import pt.lunacloud.LunacloudServiceException;
 import pt.lunacloud.auth.ClasspathPropertiesFileCredentialsProvider;
-import pt.lunacloud.services.s3.LunacloudStorage;
-import pt.lunacloud.services.s3.LunacloudStorageClient;
-import pt.lunacloud.services.s3.model.Bucket;
-import pt.lunacloud.services.s3.model.GetObjectRequest;
-import pt.lunacloud.services.s3.model.ListObjectsRequest;
-import pt.lunacloud.services.s3.model.ObjectListing;
-import pt.lunacloud.services.s3.model.PutObjectRequest;
-import pt.lunacloud.services.s3.model.S3Object;
-import pt.lunacloud.services.s3.model.S3ObjectSummary;
+import pt.lunacloud.services.storage.LunacloudStorage;
+import pt.lunacloud.services.storage.LunacloudStorageClient;
+import pt.lunacloud.services.storage.model.Bucket;
+import pt.lunacloud.services.storage.model.GetObjectRequest;
+import pt.lunacloud.services.storage.model.ListObjectsRequest;
+import pt.lunacloud.services.storage.model.ObjectListing;
+import pt.lunacloud.services.storage.model.PutObjectRequest;
+import pt.lunacloud.services.storage.model.StorageObject;
+import pt.lunacloud.services.storage.model.StorageObjectSummary;
 
 /**
- * This sample demonstrates how to make basic requests to Amazon S3 using the
- * AWS SDK for Java.
+ * This sample demonstrates how to make basic requests to Lunacloud storage
+ * using the AWS SDK for Java.
  * <p>
- * <b>Prerequisites:</b> You must have a valid Amazon Web Services developer
- * account, and be signed up to use Amazon S3. For more information on Amazon
- * S3, see http://aws.amazon.com/s3.
- * <p>
- * <b>Important:</b> Be sure to fill in your AWS access credentials in the
- * AwsCredentials.properties file before you try to run this sample.
- * http://aws.amazon.com/security-credentials
+ * <b>Prerequisites:</b> You must have valid Lunacloud Storage Access and Secret
+ * keys.
  */
 public class StorageClient {
 
@@ -59,27 +54,28 @@ public class StorageClient {
 
 	public static void main(String[] args) throws IOException {
 		/*
-		 * This credentials provider implementation loads your AWS credentials
-		 * from a properties file at the root of your classpath.
+		 * This credentials provider implementation loads your Lunacloud Storage
+		 * credentials from a properties file at the root of your classpath.
 		 * 
-		 * Important: Be sure to fill in your AWS access credentials in the
-		 * AwsCredentials.properties file before you try to run this sample.
-		 * http://aws.amazon.com/security-credentials
+		 * Important: Be sure to fill in your access credentials in the
+		 * LunacloudCredentials.properties file before you try to run this
+		 * sample.
 		 */
 		LunacloudStorage s = new LunacloudStorageClient(
 		        new ClasspathPropertiesFileCredentialsProvider());
-		
 
-		String bucketName = "my-first-s3-bucket-" + UUID.randomUUID();
+		String bucketName = "my-first-bucket-" + UUID.randomUUID();
 		String key = "MyObjectKey";
 
 		logger.info("Getting Started with Lunacloud storage");
 
 		try {
 			/*
-			 * Create a new S3 bucket - Amazon S3 bucket names are globally
-			 * unique, so once a bucket name has been taken by any user, you
-			 * can't create another bucket with that same name.
+			 * Create a new bucket.
+			 * 
+			 * Bucket names are globally unique, so once a bucket name has been
+			 * taken by any user, you can't create another bucket with that same
+			 * name.
 			 * 
 			 * You can optionally specify a location for your bucket if you want
 			 * to keep your data closer to your applications or users.
@@ -93,32 +89,36 @@ public class StorageClient {
 				logger.info(" - {}\n", bucket.getName());
 
 			/*
-			 * Upload an object to your bucket - You can easily upload a file to
-			 * S3, or upload directly an InputStream if you know the length of
-			 * the data in the stream. You can also specify your own metadata
-			 * when uploading to S3, which allows you set a variety of options
-			 * like content-type and content-encoding, plus additional metadata
-			 * specific to your applications.
+			 * Upload an object to your bucket.
+			 * 
+			 * You can easily upload a file to Storage, or upload directly an
+			 * InputStream if you know the length of the data in the stream. You
+			 * can also specify your own metadata when uploading to Storage,
+			 * which allows you set a variety of options like content-type and
+			 * content-encoding, plus additional metadata specific to your
+			 * applications.
 			 */
 			logger.info("Uploading a new object to Lunacloud Storage from a file\n");
 			s.putObject(new PutObjectRequest(bucketName, key,
 			        createSampleFile()));
 
 			/*
-			 * Download an object - When you download an object, you get all of
-			 * the object's metadata and a stream from which to read the
-			 * contents. It's important to read the contents of the stream as
-			 * quickly as possibly since the data is streamed directly from
-			 * Amazon S3 and your network connection will remain open until you
-			 * read all the data or close the input stream.
+			 * Download an object
+			 * 
+			 * When you download an object, you get all of the object's metadata
+			 * and a stream from which to read the contents. It's important to
+			 * read the contents of the stream as quickly as possibly since the
+			 * data is streamed directly from Lunacloud Storage and your network
+			 * connection will remain open until you read all the data or close
+			 * the input stream.
 			 * 
 			 * GetObjectRequest also supports several other options, including
 			 * conditional downloading of objects based on modification times,
 			 * ETags, and selectively downloading a range of an object.
 			 */
 			logger.info("Downloading an object");
-			S3Object object = s
-			        .getObject(new GetObjectRequest(bucketName, key));
+			StorageObject object = s.getObject(new GetObjectRequest(bucketName,
+			        key));
 			System.out.println("Content-Type: "
 			        + object.getObjectMetadata().getContentType());
 			displayTextInputStream(object.getObjectContent());
@@ -128,14 +128,14 @@ public class StorageClient {
 			 * for listing the objects in your bucket. Keep in mind that buckets
 			 * with many objects might truncate their results when listing their
 			 * objects, so be sure to check if the returned object listing is
-			 * truncated, and use the AmazonS3.listNextBatchOfObjects(...)
-			 * operation to retrieve additional results.
+			 * truncated, and use the listNextBatchOfObjects(...) operation to
+			 * retrieve additional results.
 			 */
 			logger.info("Listing objects");
 			ObjectListing objectListing = s
 			        .listObjects(new ListObjectsRequest().withBucketName(
 			                bucketName).withPrefix("My"));
-			for (S3ObjectSummary objectSummary : objectListing
+			for (StorageObjectSummary objectSummary : objectListing
 			        .getObjectSummaries())
 				logger.info(
 				        " - {}, size:{}",
@@ -143,42 +143,45 @@ public class StorageClient {
 				                objectSummary.getSize() });
 
 			/*
-			 * Delete an object - Unless versioning has been turned on for your
-			 * bucket, there is no way to undelete an object, so use caution
-			 * when deleting objects.
+			 * Delete an object.
+			 * 
+			 * Unless versioning has been turned on for your bucket, there is no
+			 * way to undelete an object, so use caution when deleting objects.
 			 */
 			logger.info("Deleting an object\n");
 			s.deleteObject(bucketName, key);
 
 			/*
-			 * Delete a bucket - A bucket must be completely empty before it can
-			 * be deleted, so remember to delete any objects from your buckets
-			 * before you try to delete them.
+			 * Delete a bucket.
+			 * 
+			 * A bucket must be completely empty before it can be deleted, so
+			 * remember to delete any objects from your buckets before you try
+			 * to delete them.
 			 */
 			logger.info("Deleting bucket {}...\n", bucketName);
 			s.deleteBucket(bucketName);
-		} catch (AmazonServiceException ase) {
+		} catch (LunacloudServiceException lse) {
 			logger.error(
-			        "Caught an AmazonServiceException, which means your request made it "
-			                + "to Amazon S3, but was rejected with an error response for some reason.",
-			        ase);
-			logger.error("Error Message:    " + ase.getMessage());
-			logger.error("HTTP Status Code: " + ase.getStatusCode());
-			logger.error("AWS Error Code:   " + ase.getErrorCode());
-			logger.error("Error Type:       " + ase.getErrorType());
-			logger.error("Request ID:       " + ase.getRequestId());
-		} catch (AmazonClientException ace) {
+			        "Caught an LunacloudServiceException, which means your request made it "
+			                + "to Lunacloud Storage, but was rejected with an error response for some reason.",
+			        lse);
+			logger.error("Error Message:    " + lse.getMessage());
+			logger.error("HTTP Status Code: " + lse.getStatusCode());
+			logger.error("Error Code:   " + lse.getErrorCode());
+			logger.error("Error Type:       " + lse.getErrorType());
+			logger.error("Request ID:       " + lse.getRequestId());
+		} catch (LunacloudClientException lce) {
 			logger.error(
-			        "Caught an AmazonClientException, which means the client encountered "
-			                + "a serious internal problem while trying to communicate with S3, "
+			        "Caught an LunacloudClientException, which means the client encountered "
+			                + "a serious internal problem while trying to communicate with Storage, "
 			                + "such as not being able to access the network.",
-			        ace);
+			        lce);
 		}
 	}
 
 	/**
 	 * Creates a temporary file with text data to demonstrate uploading a file
-	 * to Amazon S3
+	 * to Lunacloud Storage
 	 * 
 	 * @return A newly created temporary file with text data.
 	 * 
